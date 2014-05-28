@@ -5,25 +5,55 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 
 public class Client {
-	static String masterHostname = "localhost";
-	static int masterPortNo = 5004;
+
+	public void write() {
+
+	}
 
 	public static void main(String[] args) throws NotBoundException,
 			FileNotFoundException, IOException {
+
+		Configurator config = Configurator.getInstance();
+
 		String fileName = "7amda";
-		Registry registryMaster = LocateRegistry.getRegistry(masterHostname,
-				masterPortNo);
+		// Get Registry Server
+		Registry registryMaster = LocateRegistry.getRegistry(
+				config.getMasterHostname(), config.getMasterPort());
 		MasterServerClientInterface masterHandler = (MasterServerClientInterface) registryMaster
 				.lookup("MasterServerClientInterface");
+
+		// READ FILE:
+		// Get primary replica from Master server
 		ReplicaLoc[] rlocs = masterHandler.read(fileName);
-		// use replica location........
-		System.out.println("Replica location = " + rlocs[0].location);
+
+		String replicaLoc = rlocs[0].location;
+		int replicaPort = rlocs[0].replicaPort;
+
 		// Reading from replica
-		Registry registryReplica = LocateRegistry.getRegistry(
-				rlocs[0].location, 5005);
-		ReplicaServerClientInterface replicaHandler = (ReplicaServerClientInterface) registryReplica
+		Registry registryReplica1 = LocateRegistry.getRegistry(replicaLoc,
+				replicaPort);
+		ReplicaServerClientInterface replicaHandler = (ReplicaServerClientInterface) registryReplica1
 				.lookup("ReplicaServerClientInterface");
 		FileContent fileContent = replicaHandler.read(fileName);
 		System.out.println(fileContent.toString());
+
+		// --------------------------------------------------------------
+		// WRITE FILE:
+		FileContent fc = new FileContent(fileName, "Bezo Mezo");
+		WriteMsg wMsg = masterHandler.write(fc);
+
+		System.out.println(wMsg.toString());
+
+		String writeReplicaLoc = wMsg.getLoc().location;
+		int writeReplicaPort = wMsg.getLoc().replicaPort;
+
+		// Writing in replica
+		Registry registryReplica2 = LocateRegistry.getRegistry(writeReplicaLoc,
+				writeReplicaPort);
+		replicaHandler = (ReplicaServerClientInterface) registryReplica2
+				.lookup("ReplicaServerClientInterface");
+		WriteMsg msg = replicaHandler.write(wMsg.getTransactionId(),
+				wMsg.getTimeStamp(), fc);
+		System.out.println(msg.toString());
 	}
 }
