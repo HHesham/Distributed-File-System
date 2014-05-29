@@ -2,6 +2,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import java.util.TreeMap;
 
 //import test.MessageNotFoundException;
 
@@ -19,12 +20,12 @@ public interface ReplicaServerClientInterface extends Remote {
 	 * @throws IOException
 	 * @throws RemoteException
 	 */
-	public WriteMsg write(long txnID, long msgSeqNum, FileContent data)
+	public AckMsg write(long txnID, long msgSeqNum, FileContent data)
 			throws RemoteException, IOException;
-	
+
 	public FileContent read(String fileName) throws FileNotFoundException,
-	IOException, RemoteException;
-	
+			IOException, RemoteException;
+
 	/**
 	 * 
 	 * @param txnID
@@ -37,7 +38,7 @@ public interface ReplicaServerClientInterface extends Remote {
 	 */
 	public boolean commit(long txnID, long numOfMsgs)
 			throws MessageNotFoundException, RemoteException;
-	
+
 	/**
 	 * * @param txnID: the ID of the transaction to which this message relates
 	 * 
@@ -45,4 +46,9 @@ public interface ReplicaServerClientInterface extends Remote {
 	 * @throws RemoteException
 	 */
 	public boolean abort(long txnID) throws RemoteException;
+
+	public void broadCast(String flName, TreeMap<Long, String> treeMap)
+			throws RemoteException;
+
+	public void createFile(String fileName) throws RemoteException;
 }
