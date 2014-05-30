@@ -67,7 +67,9 @@ public class replicaServer implements ReplicaServerClientInterface {
 	@Override
 	public FileContent read(String fileName) throws FileNotFoundException,
 			IOException, RemoteException {
-		File file = new File("../" + fileName);
+		// File file = new File("../" + fileName);
+		File file = new File(replicaPath + "/replica" + this.replicaID + "/"
+				+ fileName);
 		FileInputStream fis = new FileInputStream(file);
 		byte[] data = new byte[(int) file.length()];
 		fis.read(data);
