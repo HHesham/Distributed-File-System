@@ -12,11 +12,14 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.StringTokenizer;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class replicaServer implements ReplicaServerClientInterface {
 	String replicaLocation;
@@ -27,9 +30,11 @@ public class replicaServer implements ReplicaServerClientInterface {
 	HashMap<Long, String> tranx;
 	MasterServerClientInterface masterHandler;
 	HashMap<Integer, ReplicaLoc> replicaSlaves;
+	ConcurrentHashMap<String, ReentrantReadWriteLock> fileLock;
 
 	public replicaServer(String replicaLoc, int portNum, String replicaPath,
 			int replicaID) throws IOException, NotBoundException {
+		this.fileLock = new ConcurrentHashMap<String, ReentrantReadWriteLock>();
 		this.replicaLocation = replicaLoc;
 		this.portNum = portNum;
 		this.replicaPath = replicaPath;
@@ -83,9 +88,12 @@ public class replicaServer implements ReplicaServerClientInterface {
 	@Override
 	public boolean commit(long txnID, long numOfMsgs)
 			throws MessageNotFoundException, RemoteException {
-
-		// TODO lock
 		String fileName = tranx.get(txnID);
+		if (!fileLock.contains(fileName))
+			fileLock.put(fileName, new ReentrantReadWriteLock());
+		// lock
+		fileLock.get(fileName).writeLock().lock();
+
 		try {
 			System.out.println("Commiting to replica : " + replicaPath
 					+ "/replica" + this.replicaID + "/" + fileName);
@@ -105,19 +113,27 @@ public class replicaServer implements ReplicaServerClientInterface {
 			System.err.println("Error in commit: " + e.getMessage());
 			return false;
 		}
-
-		// unlock
+		ArrayList<ReentrantReadWriteLock> locks;
 		try {
-			broadcastToReplicas(txnID, fileName);
+			locks = broadcastToReplicas(txnID, fileName);
+
+			// unlock
+			fileLock.get(fileName).writeLock().unlock();
+			// release locks
+			for (int i = 0; i < locks.size(); i++)
+				locks.get(i).writeLock().unlock();
+			
 		} catch (NotBoundException e) {
 			System.err.println("Error: Broadcast exception");
 			return false;
 		}
+
 		return true;
 	}
 
-	public void broadcastToReplicas(long txID, String fileName)
-			throws RemoteException, NotBoundException {
+	public ArrayList<ReentrantReadWriteLock> broadcastToReplicas(long txID,
+			String fileName) throws RemoteException, NotBoundException {
+		ArrayList<ReentrantReadWriteLock> locks = new ArrayList<ReentrantReadWriteLock>();
 		for (Iterator<Entry<Integer, ReplicaLoc>> iterator = replicaSlaves
 				.entrySet().iterator(); iterator.hasNext();) {
 			Entry<Integer, ReplicaLoc> entry = iterator.next();
@@ -134,13 +150,21 @@ public class replicaServer implements ReplicaServerClientInterface {
 			Registry replicaReg = LocateRegistry.getRegistry(replLoc, replPort);
 			ReplicaServerClientInterface replHandler = (ReplicaServerClientInterface) replicaReg
 					.lookup(Global.REPLICA_LOOKUP);
-			replHandler.broadcast(fileName, txnToData.get(txID));
+			locks.add(replHandler.broadcast(fileName, txnToData.get(txID)));
 		}
+		return locks;
+		// return locks
 	}
 
 	@Override
-	public void broadcast(String flName, TreeMap<Long, String> mapValues)
-			throws RemoteException {
+	public ReentrantReadWriteLock broadcast(String flName,
+			TreeMap<Long, String> mapValues) throws RemoteException {
+
+		if (!fileLock.contains(flName))
+			fileLock.put(flName, new ReentrantReadWriteLock());
+		// lock
+		fileLock.get(flName).writeLock().lock();
+
 		try {
 			System.out.println("Broadcasting to : " + replicaPath + "/replica"
 					+ this.replicaID + "/" + flName);
@@ -156,6 +180,8 @@ public class replicaServer implements ReplicaServerClientInterface {
 		} catch (Exception e) {
 			System.err.println("Error in broadcast method: " + e.getMessage());
 		}
+		return fileLock.get(flName);
+		// return locks
 	}
 
 	@Override
