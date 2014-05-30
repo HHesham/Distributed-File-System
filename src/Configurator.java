@@ -14,6 +14,12 @@ public class Configurator {
 		readConfig();
 	}
 
+	/**
+	 * Singleton constructor for the master server
+	 * 
+	 * @return
+	 * @throws IOException
+	 */
 	public static Configurator getInstance() throws IOException {
 		if (myConfig == null) {
 			return myConfig = new Configurator();
@@ -32,11 +38,11 @@ public class Configurator {
 
 	private void readConfig() throws IOException {
 		BufferedReader buff = new BufferedReader(new FileReader(
-				"../ServerConfig.in"));
+				Global.MASTER_CONFIG_PATH));
 		StringTokenizer st;
 
 		// First entry in the configuration file is the master server
-		st = new StringTokenizer(buff.readLine(), ",");
+		st = new StringTokenizer(buff.readLine(), Global.MASTER_DELIM);
 		this.masterHostname = st.nextToken();
 		this.masterPortNo = Integer.parseInt(st.nextToken());
 

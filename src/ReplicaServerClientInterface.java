@@ -4,8 +4,6 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.TreeMap;
 
-//import test.MessageNotFoundException;
-
 public interface ReplicaServerClientInterface extends Remote {
 	/**
 	 * 
@@ -47,7 +45,7 @@ public interface ReplicaServerClientInterface extends Remote {
 	 */
 	public boolean abort(long txnID) throws RemoteException;
 
-	public void broadCast(String flName, TreeMap<Long, String> treeMap)
+	public void broadcast(String flName, TreeMap<Long, String> treeMap)
 			throws RemoteException;
 
 	public void createFile(String fileName) throws RemoteException;

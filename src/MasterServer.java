@@ -2,6 +2,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -10,9 +11,9 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.StringTokenizer;
-import java.util.Map.Entry;
 
 public class MasterServer implements MasterServerClientInterface {
 	HashMap<Integer, ReplicaLoc> replicaPaths;
@@ -20,15 +21,13 @@ public class MasterServer implements MasterServerClientInterface {
 	ArrayList<String> files;
 	int numReplicas = 4;
 	Random rand;
-	final String repServers = "../repServers.in";
 	int txID = 0;
 
 	public MasterServer() throws IOException {
-		rand = new Random();
+		this.rand = new Random();
 		// initialize the file list
-		files = new ArrayList<String>();
-		files.add("7amda");
-		// TODO
+		this.files = new ArrayList<String>();
+		readFilesDirectory();
 
 		// initialize the file primary replica map
 		filePrimReplica = new HashMap<String, Integer>();
@@ -37,19 +36,29 @@ public class MasterServer implements MasterServerClientInterface {
 
 		// initialize the replica path map
 		replicaPaths = new HashMap<Integer, ReplicaLoc>();
-		BufferedReader br = new BufferedReader(new FileReader(repServers));
+		BufferedReader br = new BufferedReader(new FileReader(
+				Global.REPLICA_INPUT_PATH));
 		int replicaIndex = 0;
 		String line;
 		StringTokenizer st;
 
 		while ((line = br.readLine()) != null) {
-			System.out.println(line);
-			st = new StringTokenizer(line, ",");
+			st = new StringTokenizer(line, Global.REPLICA_DELIM);
 			replicaPaths.put(replicaIndex, new ReplicaLoc(st.nextToken(),
 					Integer.parseInt(st.nextToken()), replicaIndex));
 			replicaIndex++;
 		}
 		br.close();
+	}
+
+	private void readFilesDirectory() throws IOException {
+		BufferedReader buff = new BufferedReader(new InputStreamReader(
+				System.in));
+		String fName = "";
+		while ((fName = buff.readLine()) != null)
+			this.files.add(fName);
+
+		buff.close();
 	}
 
 	@Override
@@ -64,8 +73,8 @@ public class MasterServer implements MasterServerClientInterface {
 		if (files.contains(fileName)) {
 			ReplicaLoc primLoc = replicaPaths
 					.get(filePrimReplica.get(fileName));
-			// TODO
-			// return all replicas
+
+			// TODO return all replicas
 			return new ReplicaLoc[] { primLoc };
 		}
 		return null;
@@ -75,7 +84,7 @@ public class MasterServer implements MasterServerClientInterface {
 	public WriteMsg write(FileContent data) throws RemoteException,
 			IOException, NotBoundException {
 		if (!files.contains(data.fileName)) {
-			// create new file and set metadata
+			// create new file and set meta data
 			files.add(data.fileName);
 			filePrimReplica.put(data.fileName, rand.nextInt(numReplicas));
 
@@ -90,7 +99,7 @@ public class MasterServer implements MasterServerClientInterface {
 				Registry registryReplica1 = LocateRegistry.getRegistry(replLoc,
 						replPort);
 				ReplicaServerClientInterface replHandler = (ReplicaServerClientInterface) registryReplica1
-						.lookup("ReplicaServerClientInterface");
+						.lookup(Global.REPLICA_LOOKUP);
 				replHandler.createFile(data.fileName);
 			}
 		}
@@ -113,6 +122,7 @@ public class MasterServer implements MasterServerClientInterface {
 			MasterServer obj = new MasterServer();
 			MasterServerClientInterface stub = (MasterServerClientInterface) UnicastRemoteObject
 					.exportObject(obj, 0);
+
 			// Bind the remote object's stub in the registry
 			Registry registry = LocateRegistry.getRegistry(masterPort);
 			registry.rebind("MasterServerClientInterface", stub);

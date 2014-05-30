@@ -1,13 +1,9 @@
 import java.io.Serializable;
 
 public class AckMsg implements Serializable {
-
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 6954352558662638184L;
-	private long txnID;
-	private long msgSeqNum;
+	private long txnID; // transaction ID
+	private long msgSeqNum; // chunk message sequence number
 
 	public AckMsg(long tId, long msgSeq) {
 		this.txnID = tId;
@@ -24,6 +20,6 @@ public class AckMsg implements Serializable {
 
 	@Override
 	public String toString() {
-		return txnID + " " + msgSeqNum;
+		return "AckMsg [txnID=" + txnID + ", msgSeqNum=" + msgSeqNum + "]";
 	}
 }

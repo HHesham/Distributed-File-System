@@ -1,5 +1,4 @@
 import java.io.Serializable;
-import java.util.StringTokenizer;
 
 public class ReplicaLoc implements Serializable {
 

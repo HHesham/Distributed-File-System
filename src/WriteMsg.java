@@ -1,9 +1,6 @@
 import java.io.Serializable;
 
 public class WriteMsg implements Serializable {
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 5583287534509576844L;
 	private long transactionId;
 	private long timeStamp;

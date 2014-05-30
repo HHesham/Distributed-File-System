@@ -3,7 +3,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -24,7 +23,7 @@ public class replicaServer implements ReplicaServerClientInterface {
 	String replicaPath;
 	int portNum;
 	int replicaID;
-	HashMap<Long, TreeMap<Long, String>> map;
+	HashMap<Long, TreeMap<Long, String>> txnToData;
 	HashMap<Long, String> tranx;
 	MasterServerClientInterface masterHandler;
 	HashMap<Integer, ReplicaLoc> replicaSlaves;
@@ -35,7 +34,7 @@ public class replicaServer implements ReplicaServerClientInterface {
 		this.portNum = portNum;
 		this.replicaPath = replicaPath;
 		this.replicaID = replicaID;
-		this.map = new HashMap<Long, TreeMap<Long, String>>();
+		this.txnToData = new HashMap<Long, TreeMap<Long, String>>();
 		this.tranx = new HashMap<Long, String>();
 		initMasterServer();
 	}
@@ -45,7 +44,7 @@ public class replicaServer implements ReplicaServerClientInterface {
 		Registry registryMaster = LocateRegistry.getRegistry(
 				config.getMasterHostname(), config.getMasterPort());
 		masterHandler = (MasterServerClientInterface) registryMaster
-				.lookup("MasterServerClientInterface");
+				.lookup(Global.MASTER_LOOKUP);
 		replicaSlaves = masterHandler.getReplicaPaths();
 	}
 
@@ -54,27 +53,15 @@ public class replicaServer implements ReplicaServerClientInterface {
 			throws RemoteException, IOException {
 		if (!tranx.containsKey(txnID))
 			tranx.put(txnID, data.fileName);
-		String content = data.content;
-		System.out.println(content + "         " + msgSeqNum);
-		// String tempFileName = "../" + data.fileName + "." + txnID + ".txt";
-		if (map.containsKey(txnID))
-			map.get(txnID).put(msgSeqNum, data.content);
+
+		if (txnToData.containsKey(txnID))
+			txnToData.get(txnID).put(msgSeqNum, data.fileContent);
 		else {
-			map.put(txnID, new TreeMap<Long, String>());
-			map.get(txnID).put(msgSeqNum, data.content);
+			txnToData.put(txnID, new TreeMap<Long, String>());
+			txnToData.get(txnID).put(msgSeqNum, data.fileContent);
 		}
-		// try {
-		// // File tempFile = new File(tempFileName);
-		// FileWriter fstream = new FileWriter(tempFileName);
-		// BufferedWriter out = new BufferedWriter(fstream);
-		// out.write(content);
-		// out.close();
-		// } catch (Exception e) {
-		// System.err.println("Error: " + e.getMessage());
-		// }
-		AckMsg ack = new AckMsg(txnID, ++msgSeqNum);
-		System.out.println(content);
-		return ack;
+
+		return new AckMsg(txnID, ++msgSeqNum);
 	}
 
 	@Override
@@ -94,34 +81,34 @@ public class replicaServer implements ReplicaServerClientInterface {
 	@Override
 	public boolean commit(long txnID, long numOfMsgs)
 			throws MessageNotFoundException, RemoteException {
-		System.out.println(map.get(txnID).toString());
 
 		// TODO lock
 		String fileName = tranx.get(txnID);
 		try {
-			System.out.println(replicaPath + "/replica" + this.replicaID + "/"
-					+ fileName);
+			System.out.println("Commiting to replica : " + replicaPath
+					+ "/replica" + this.replicaID + "/" + fileName);
+
+			// Append to file and not overwrite
 			PrintWriter fstream = new PrintWriter(new BufferedWriter(
 					new FileWriter(replicaPath + "/replica" + this.replicaID
 							+ "/" + fileName, true)));
-			TreeMap<Long, String> tMap = map.get(txnID);
+
+			TreeMap<Long, String> tMap = txnToData.get(txnID);
 			for (Iterator<String> iterator = tMap.values().iterator(); iterator
 					.hasNext();) {
-				System.out.println("bebo");
 				fstream.print(iterator.next());
 			}
 			fstream.close();
 		} catch (Exception e) {
-			System.err.println("Error: " + e.getMessage());
+			System.err.println("Error in commit: " + e.getMessage());
 			return false;
 		}
 
 		// unlock
-		// TODO Broadcast to all replicas
 		try {
 			broadcastToReplicas(txnID, fileName);
 		} catch (NotBoundException e) {
-			System.out.println("3'alta fel broadcast");
+			System.err.println("Error: Broadcast exception");
 			return false;
 		}
 		return true;
@@ -133,7 +120,7 @@ public class replicaServer implements ReplicaServerClientInterface {
 				.entrySet().iterator(); iterator.hasNext();) {
 			Entry<Integer, ReplicaLoc> entry = iterator.next();
 
-			// skip current replica
+			// skip self-replica
 			if (entry.getKey() == this.replicaID)
 				continue;
 
@@ -142,20 +129,20 @@ public class replicaServer implements ReplicaServerClientInterface {
 			int replPort = repl.replicaPort;
 
 			// Reading from replica
-			Registry registryReplica1 = LocateRegistry.getRegistry(replLoc,
-					replPort);
-			ReplicaServerClientInterface replHandler = (ReplicaServerClientInterface) registryReplica1
-					.lookup("ReplicaServerClientInterface");
-			replHandler.broadCast(fileName, map.get(txID));
+			Registry replicaReg = LocateRegistry.getRegistry(replLoc, replPort);
+			ReplicaServerClientInterface replHandler = (ReplicaServerClientInterface) replicaReg
+					.lookup(Global.REPLICA_LOOKUP);
+			replHandler.broadcast(fileName, txnToData.get(txID));
 		}
 	}
 
 	@Override
-	public void broadCast(String flName, TreeMap<Long, String> mapValues)
+	public void broadcast(String flName, TreeMap<Long, String> mapValues)
 			throws RemoteException {
 		try {
-			System.out.println(replicaPath + "/replica" + this.replicaID + "/"
-					+ flName);
+			System.out.println("Broadcasting to : " + replicaPath + "/replica"
+					+ this.replicaID + "/" + flName);
+
 			PrintWriter out = new PrintWriter(new BufferedWriter(
 					new FileWriter(replicaPath + "/replica" + this.replicaID
 							+ "/" + flName, true)));
@@ -165,14 +152,14 @@ public class replicaServer implements ReplicaServerClientInterface {
 			}
 			out.close();
 		} catch (Exception e) {
-			System.err.println("Error: " + e.getMessage());
+			System.err.println("Error in broadcast method: " + e.getMessage());
 		}
 	}
 
 	@Override
 	public boolean abort(long txnID) throws RemoteException {
 		try {
-			map.remove(txnID);
+			txnToData.remove(txnID);
 			return true;
 		} catch (Exception e) {
 			return false;
@@ -182,12 +169,12 @@ public class replicaServer implements ReplicaServerClientInterface {
 	public static void main(String[] args) {
 		try {
 			BufferedReader buff = new BufferedReader(new FileReader(
-					"../repServers.in"));
+					Global.REPLICA_INPUT_PATH));
 			String line;
 			int id = 0;
 			while ((line = buff.readLine()) != null) {
 				StringTokenizer st;
-				st = new StringTokenizer(line, ",");
+				st = new StringTokenizer(line, Global.REPLICA_DELIM);
 				String replicaHostname = st.nextToken();
 				int replicaPortNo = Integer.parseInt(st.nextToken());
 				String replicaPath = st.nextToken();
@@ -199,17 +186,14 @@ public class replicaServer implements ReplicaServerClientInterface {
 
 				File replicaFolder = new File(replicaPath + "/replica"
 						+ obj.replicaID + "/");
-				if (!replicaFolder.exists()) {
+				if (!replicaFolder.exists())
 					replicaFolder.mkdir();
-					System.out.println(replicaFolder.exists());
-					System.out.println(replicaPath + "/replica" + obj.replicaID
-							+ "/");
-				}
+
 				ReplicaServerClientInterface stub = (ReplicaServerClientInterface) UnicastRemoteObject
 						.exportObject(obj, 0);
 				// Bind the remote object's stub in the registry
 				Registry registry = LocateRegistry.getRegistry(replicaPortNo);
-				registry.rebind("ReplicaServerClientInterface", stub);
+				registry.rebind(Global.REPLICA_LOOKUP, stub);
 			}
 
 			buff.close();
@@ -226,7 +210,7 @@ public class replicaServer implements ReplicaServerClientInterface {
 			File file = new File(replicaPath + "/replica" + this.replicaID
 					+ "/" + fileName);
 			if (file.createNewFile()) {
-				System.out.println("File is created!");
+				System.out.println("File is created !");
 			} else {
 				System.out.println("File already exists.");
 			}
@@ -234,6 +218,5 @@ public class replicaServer implements ReplicaServerClientInterface {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-
 	}
 }

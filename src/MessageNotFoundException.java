@@ -1,3 +1,5 @@
+import java.util.Arrays;
+
 public class MessageNotFoundException extends Exception {
 
 	private static final long serialVersionUID = 1L;
@@ -11,4 +13,9 @@ public class MessageNotFoundException extends Exception {
 		this.msgNum = msgNum;
 	}
 
+	@Override
+	public String toString() {
+		return "MessageNotFoundException [msgNum=" + Arrays.toString(msgNum)
+				+ "]";
+	}
 }
