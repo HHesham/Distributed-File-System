@@ -55,7 +55,7 @@ public class MasterServer implements MasterServerClientInterface {
 		BufferedReader buff = new BufferedReader(new InputStreamReader(
 				System.in));
 		String fName = "";
-		while ((fName = buff.readLine()) != null)
+		while (!(fName = buff.readLine()).equals("#"))
 			this.files.add(fName);
 
 		buff.close();
