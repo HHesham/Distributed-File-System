@@ -52,8 +52,8 @@ public class MasterServer implements MasterServerClientInterface {
 	}
 
 	private void readFilesDirectory() throws IOException {
-		BufferedReader buff = new BufferedReader(new InputStreamReader(
-				System.in));
+		BufferedReader buff = new BufferedReader(new FileReader(
+				Global.FILES_DIRECTORY));
 		String fName = "";
 		while (!(fName = buff.readLine()).equals("#"))
 			this.files.add(fName);
