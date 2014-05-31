@@ -12,7 +12,6 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
@@ -113,7 +112,7 @@ public class replicaServer implements ReplicaServerClientInterface {
 			System.err.println("Error in commit: " + e.getMessage());
 			return false;
 		}
-		ArrayList<ReentrantReadWriteLock> locks;
+
 		try {
 			broadcastToReplicas(txnID, fileName);
 
@@ -264,5 +263,17 @@ public class replicaServer implements ReplicaServerClientInterface {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	@Override
+	public int getReplicaID() throws RemoteException {
+		return this.replicaID;
+	}
+
+	@Override
+	public boolean checkIsAlive() throws RemoteException {
+		File replicaFolder = new File(replicaPath + "/replica" + this.replicaID
+				+ "/");
+		return replicaFolder.exists();
 	}
 }

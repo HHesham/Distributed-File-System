@@ -3,7 +3,6 @@ import java.io.IOException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.TreeMap;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public interface ReplicaServerClientInterface extends Remote {
 	/**
@@ -52,4 +51,8 @@ public interface ReplicaServerClientInterface extends Remote {
 	public void createFile(String fileName) throws RemoteException;
 
 	public void unlockReentrantWriteLock(String fName) throws RemoteException;
+
+	public int getReplicaID() throws RemoteException;
+
+	public boolean checkIsAlive() throws RemoteException;
 }

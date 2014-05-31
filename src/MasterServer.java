@@ -2,7 +2,6 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -14,6 +13,8 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.StringTokenizer;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class MasterServer implements MasterServerClientInterface {
 	HashMap<Integer, ReplicaLoc> replicaPaths;
@@ -22,9 +23,12 @@ public class MasterServer implements MasterServerClientInterface {
 	int numReplicas = 4;
 	Random rand;
 	int txID = 0;
+	long executionTime;
 
 	public MasterServer() throws IOException {
 		this.rand = new Random();
+		this.executionTime = 0;
+
 		// initialize the file list
 		this.files = new ArrayList<String>();
 		readFilesDirectory();
@@ -49,6 +53,60 @@ public class MasterServer implements MasterServerClientInterface {
 			replicaIndex++;
 		}
 		br.close();
+
+		doHearbeats();
+	}
+
+	private void doHearbeats() {
+		new Timer().schedule(new TimerTask() {
+			@Override
+			public void run() {
+				// this code will be executed after 5 seconds
+
+				for (Iterator<Entry<Integer, ReplicaLoc>> iterator = replicaPaths
+						.entrySet().iterator(); iterator.hasNext();) {
+					Entry<Integer, ReplicaLoc> entry = iterator.next();
+					ReplicaLoc repl = entry.getValue();
+					String replLoc = repl.location;
+					int replPort = repl.replicaPort;
+
+					// Reading from replica
+					Registry registryReplica1 = null;
+					try {
+						registryReplica1 = LocateRegistry.getRegistry(replLoc,
+								replPort);
+					} catch (RemoteException e) {
+						e.printStackTrace();
+					}
+
+					ReplicaServerClientInterface replHandler = null;
+					try {
+						replHandler = (ReplicaServerClientInterface) registryReplica1
+								.lookup(Global.REPLICA_LOOKUP);
+					} catch (RemoteException | NotBoundException e) {
+						e.printStackTrace();
+					}
+					System.out.println("Heartbeats @ sec = " + executionTime);
+					try {
+						if (!replHandler.checkIsAlive()) {
+							System.out.println("Replica #"
+									+ replHandler.getReplicaID()
+									+ " is NOT alive !");
+						} else {
+							System.out.println("Replica #"
+									+ replHandler.getReplicaID()
+									+ " is alive !");
+
+						}
+					} catch (RemoteException e) {
+						e.printStackTrace();
+					}
+				}
+
+				executionTime += 10;
+				doHearbeats();
+			}
+		}, 10 * 1000);
 	}
 
 	private void readFilesDirectory() throws IOException {
@@ -74,7 +132,6 @@ public class MasterServer implements MasterServerClientInterface {
 			ReplicaLoc primLoc = replicaPaths
 					.get(filePrimReplica.get(fileName));
 
-			// TODO return all replicas
 			return new ReplicaLoc[] { primLoc };
 		}
 		return null;
