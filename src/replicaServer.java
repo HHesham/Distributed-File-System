@@ -89,7 +89,7 @@ public class replicaServer implements ReplicaServerClientInterface {
 	public boolean commit(long txnID, long numOfMsgs)
 			throws MessageNotFoundException, RemoteException {
 		String fileName = tranx.get(txnID);
-		if (!fileLock.contains(fileName))
+		if (!fileLock.containsKey(fileName))
 			fileLock.put(fileName, new ReentrantReadWriteLock());
 		// lock
 		fileLock.get(fileName).writeLock().lock();
@@ -115,14 +115,31 @@ public class replicaServer implements ReplicaServerClientInterface {
 		}
 		ArrayList<ReentrantReadWriteLock> locks;
 		try {
-			locks = broadcastToReplicas(txnID, fileName);
+			broadcastToReplicas(txnID, fileName);
 
 			// unlock
 			fileLock.get(fileName).writeLock().unlock();
 			// release locks
-			for (int i = 0; i < locks.size(); i++)
-				locks.get(i).writeLock().unlock();
-			
+			for (Iterator<Entry<Integer, ReplicaLoc>> iterator = replicaSlaves
+					.entrySet().iterator(); iterator.hasNext();) {
+				Entry<Integer, ReplicaLoc> entry = iterator.next();
+
+				// skip self-replica
+				if (entry.getKey() == this.replicaID)
+					continue;
+
+				ReplicaLoc repl = entry.getValue();
+				String replLoc = repl.location;
+				int replPort = repl.replicaPort;
+
+				Registry replicaReg = LocateRegistry.getRegistry(replLoc,
+						replPort);
+				ReplicaServerClientInterface replHandler = (ReplicaServerClientInterface) replicaReg
+						.lookup(Global.REPLICA_LOOKUP);
+
+				replHandler.unlockReentrantWriteLock(fileName);
+			}
+
 		} catch (NotBoundException e) {
 			System.err.println("Error: Broadcast exception");
 			return false;
@@ -131,9 +148,8 @@ public class replicaServer implements ReplicaServerClientInterface {
 		return true;
 	}
 
-	public ArrayList<ReentrantReadWriteLock> broadcastToReplicas(long txID,
-			String fileName) throws RemoteException, NotBoundException {
-		ArrayList<ReentrantReadWriteLock> locks = new ArrayList<ReentrantReadWriteLock>();
+	public void broadcastToReplicas(long txID, String fileName)
+			throws RemoteException, NotBoundException {
 		for (Iterator<Entry<Integer, ReplicaLoc>> iterator = replicaSlaves
 				.entrySet().iterator(); iterator.hasNext();) {
 			Entry<Integer, ReplicaLoc> entry = iterator.next();
@@ -150,17 +166,15 @@ public class replicaServer implements ReplicaServerClientInterface {
 			Registry replicaReg = LocateRegistry.getRegistry(replLoc, replPort);
 			ReplicaServerClientInterface replHandler = (ReplicaServerClientInterface) replicaReg
 					.lookup(Global.REPLICA_LOOKUP);
-			locks.add(replHandler.broadcast(fileName, txnToData.get(txID)));
+			replHandler.broadcast(fileName, txnToData.get(txID));
 		}
-		return locks;
-		// return locks
 	}
 
 	@Override
-	public ReentrantReadWriteLock broadcast(String flName,
-			TreeMap<Long, String> mapValues) throws RemoteException {
+	public void broadcast(String flName, TreeMap<Long, String> mapValues)
+			throws RemoteException {
 
-		if (!fileLock.contains(flName))
+		if (!fileLock.containsKey(flName))
 			fileLock.put(flName, new ReentrantReadWriteLock());
 		// lock
 		fileLock.get(flName).writeLock().lock();
@@ -180,8 +194,11 @@ public class replicaServer implements ReplicaServerClientInterface {
 		} catch (Exception e) {
 			System.err.println("Error in broadcast method: " + e.getMessage());
 		}
-		return fileLock.get(flName);
-		// return locks
+	}
+
+	@Override
+	public void unlockReentrantWriteLock(String fName) {
+		fileLock.get(fName).writeLock().unlock();
 	}
 
 	@Override
@@ -237,6 +254,7 @@ public class replicaServer implements ReplicaServerClientInterface {
 		try {
 			File file = new File(replicaPath + "/replica" + this.replicaID
 					+ "/" + fileName);
+			System.out.println("PATTTHH " + file.getAbsolutePath());
 			if (file.createNewFile()) {
 				System.out.println("File is created !");
 			} else {

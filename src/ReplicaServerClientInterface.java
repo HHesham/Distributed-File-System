@@ -46,8 +46,10 @@ public interface ReplicaServerClientInterface extends Remote {
 	 */
 	public boolean abort(long txnID) throws RemoteException;
 
-	public ReentrantReadWriteLock broadcast(String flName, TreeMap<Long, String> treeMap)
+	public void broadcast(String flName, TreeMap<Long, String> treeMap)
 			throws RemoteException;
 
 	public void createFile(String fileName) throws RemoteException;
+
+	public void unlockReentrantWriteLock(String fName) throws RemoteException;
 }
