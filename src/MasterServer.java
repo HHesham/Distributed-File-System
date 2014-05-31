@@ -24,10 +24,12 @@ public class MasterServer implements MasterServerClientInterface {
 	Random rand;
 	int txID = 0;
 	long executionTime;
+	Logger masterLogger;
 
 	public MasterServer() throws IOException {
 		this.rand = new Random();
 		this.executionTime = 0;
+		masterLogger = Logger.getInstance();
 
 		// initialize the file list
 		this.files = new ArrayList<String>();
@@ -39,9 +41,12 @@ public class MasterServer implements MasterServerClientInterface {
 			filePrimReplica.put(files.get(i), rand.nextInt(numReplicas));
 
 		// initialize the replica path map
+		masterLogger
+				.logMessage(" Initializing replicas paths in Master Server ");
 		replicaPaths = new HashMap<Integer, ReplicaLoc>();
 		BufferedReader br = new BufferedReader(new FileReader(
 				Global.REPLICA_INPUT_PATH));
+
 		int replicaIndex = 0;
 		String line;
 		StringTokenizer st;
@@ -86,21 +91,24 @@ public class MasterServer implements MasterServerClientInterface {
 					} catch (RemoteException | NotBoundException e) {
 						e.printStackTrace();
 					}
-					System.out.println("Heartbeats @ sec = " + executionTime);
+					masterLogger.logMessage("===>> Heartbeats @ sec = "
+							+ executionTime);
 					try {
 						if (!replHandler.checkIsAlive()) {
-							System.out.println("Replica #"
+							masterLogger.logMessage("Replica #"
 									+ replHandler.getReplicaID()
 									+ " is NOT alive !");
 						} else {
-							System.out.println("Replica #"
+							masterLogger.logMessage("Replica #"
 									+ replHandler.getReplicaID()
 									+ " is alive !");
 
 						}
+
 					} catch (RemoteException e) {
 						e.printStackTrace();
 					}
+					masterLogger.logMessage("===>> Heartbeats END");
 				}
 
 				executionTime += 10;
@@ -184,9 +192,9 @@ public class MasterServer implements MasterServerClientInterface {
 			Registry registry = LocateRegistry.getRegistry(masterPort);
 			registry.rebind("MasterServerClientInterface", stub);
 
-			System.err.println("Server ready");
+			obj.masterLogger.logMessage("\t\t Master Server ready ! ");
 		} catch (Exception e) {
-			System.err.println("Server exception: " + e.toString());
+			System.err.println(" Master Server exception: " + e.toString());
 			e.printStackTrace();
 		}
 	}
