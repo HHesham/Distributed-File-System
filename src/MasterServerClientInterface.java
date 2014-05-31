@@ -33,4 +33,6 @@ public interface MasterServerClientInterface extends Remote {
 	public HashMap<Integer, ReplicaLoc> getReplicaPaths()
 			throws RemoteException;
 
+	public void notify(int readack, String fileName) throws RemoteException;
+
 }

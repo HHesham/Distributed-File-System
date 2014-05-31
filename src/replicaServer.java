@@ -64,7 +64,8 @@ public class replicaServer implements ReplicaServerClientInterface {
 			txnToData.put(txnID, new TreeMap<Long, String>());
 			txnToData.get(txnID).put(msgSeqNum, data.fileContent);
 		}
-
+		masterHandler.notify(Global.WRITEACK, data.fileName + "  backet# "
+				+ msgSeqNum + " ");
 		return new AckMsg(txnID, ++msgSeqNum);
 	}
 
@@ -81,6 +82,7 @@ public class replicaServer implements ReplicaServerClientInterface {
 
 		String content = new String(data, "UTF-8");
 		FileContent fileContent = new FileContent(fileName, content);
+		masterHandler.notify(Global.READACK, fileName);
 		return fileContent;
 	}
 
@@ -88,6 +90,7 @@ public class replicaServer implements ReplicaServerClientInterface {
 	public boolean commit(long txnID, long numOfMsgs)
 			throws MessageNotFoundException, RemoteException {
 		String fileName = tranx.get(txnID);
+		masterHandler.notify(Global.BROADCASTSTARTACK, fileName);
 		if (!fileLock.containsKey(fileName))
 			fileLock.put(fileName, new ReentrantReadWriteLock());
 		// lock
@@ -143,7 +146,7 @@ public class replicaServer implements ReplicaServerClientInterface {
 			System.err.println("Error: Broadcast exception");
 			return false;
 		}
-
+		masterHandler.notify(Global.BROADCASTENDACK, fileName);
 		return true;
 	}
 
@@ -202,6 +205,7 @@ public class replicaServer implements ReplicaServerClientInterface {
 
 	@Override
 	public boolean abort(long txnID) throws RemoteException {
+		masterHandler.notify(Global.ABORTACK, "");
 		try {
 			txnToData.remove(txnID);
 			return true;

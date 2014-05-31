@@ -1,7 +1,10 @@
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -67,7 +70,8 @@ public class MasterServer implements MasterServerClientInterface {
 			@Override
 			public void run() {
 				// this code will be executed after 5 seconds
-
+				masterLogger.logMessage("===>> Heartbeats @ sec = "
+						+ executionTime);
 				for (Iterator<Entry<Integer, ReplicaLoc>> iterator = replicaPaths
 						.entrySet().iterator(); iterator.hasNext();) {
 					Entry<Integer, ReplicaLoc> entry = iterator.next();
@@ -91,8 +95,7 @@ public class MasterServer implements MasterServerClientInterface {
 					} catch (RemoteException | NotBoundException e) {
 						e.printStackTrace();
 					}
-					masterLogger.logMessage("===>> Heartbeats @ sec = "
-							+ executionTime);
+
 					try {
 						if (!replHandler.checkIsAlive()) {
 							masterLogger.logMessage("Replica #"
@@ -108,22 +111,21 @@ public class MasterServer implements MasterServerClientInterface {
 					} catch (RemoteException e) {
 						e.printStackTrace();
 					}
-					masterLogger.logMessage("===>> Heartbeats END");
 				}
-
-				executionTime += 10;
+				masterLogger.logMessage("===>> Heartbeats END");
+				executionTime += 60;
 				doHearbeats();
 			}
-		}, 10 * 1000);
+
+		}, 60 * 1000);
 	}
 
 	private void readFilesDirectory() throws IOException {
 		BufferedReader buff = new BufferedReader(new FileReader(
 				Global.FILES_DIRECTORY));
 		String fName = "";
-		while (!(fName = buff.readLine()).equals("#"))
+		while ((fName = buff.readLine()) != null)
 			this.files.add(fName);
-
 		buff.close();
 	}
 
@@ -136,19 +138,24 @@ public class MasterServer implements MasterServerClientInterface {
 	@Override
 	public ReplicaLoc[] read(String fileName) throws FileNotFoundException,
 			IOException, RemoteException {
+		masterLogger.logMessage("===>> read '" + fileName + "' request");
+		for (int i = 0; i < files.size(); i++)
+			masterLogger.logMessage(files.get(i));
 		if (files.contains(fileName)) {
 			ReplicaLoc primLoc = replicaPaths
 					.get(filePrimReplica.get(fileName));
-
 			return new ReplicaLoc[] { primLoc };
 		}
+		masterLogger.logMessage("===>> " + fileName + " not exsist");
 		return null;
 	}
 
 	@Override
 	public WriteMsg write(FileContent data) throws RemoteException,
 			IOException, NotBoundException {
+		masterLogger.logMessage("===>> Write '" + data.fileName + "' request");
 		if (!files.contains(data.fileName)) {
+
 			// create new file and set meta data
 			files.add(data.fileName);
 			filePrimReplica.put(data.fileName, rand.nextInt(numReplicas));
@@ -167,12 +174,48 @@ public class MasterServer implements MasterServerClientInterface {
 						.lookup(Global.REPLICA_LOOKUP);
 				replHandler.createFile(data.fileName);
 			}
+			// edit in filesDirectory.in
+			try {
+				PrintWriter out = new PrintWriter(new BufferedWriter(
+						new FileWriter(Global.FILES_DIRECTORY, true)));
+				out.print(data.fileName + "\n");
+				out.close();
+			} catch (Exception e) {
+				System.err.println("Error in broadcast method: "
+						+ e.getMessage());
+			}
+			// done
+			masterLogger
+					.logMessage("===>> Creating empty file in all replicas ....");
 		}
 		ReplicaLoc primLoc = replicaPaths.get(filePrimReplica
 				.get(data.fileName));
 		WriteMsg wMsg = new WriteMsg(txID++, 1, primLoc);
-		System.out.println(wMsg.getTransactionId() + "          oooo");
+
 		return wMsg;
+	}
+
+	public void notify(int ack, String fileName) {
+		switch (ack) {
+		case Global.READACK:
+			masterLogger.logMessage("===> done reading " + fileName);
+			break;
+		case Global.WRITEACK:
+			masterLogger.logMessage("===> done writing " + fileName
+					+ "in primary replica");
+			break;
+		case Global.BROADCASTSTARTACK:
+			masterLogger.logMessage("===> Start flushing " + fileName
+					+ " to all replicas");
+			break;
+		case Global.BROADCASTENDACK:
+			masterLogger.logMessage("===> done flushing " + fileName
+					+ " to all replicas");
+			break;
+		default:
+			masterLogger.logMessage("===> Aport ");
+			break;
+		}
 	}
 
 	public static void main(String[] args) {
@@ -182,7 +225,6 @@ public class MasterServer implements MasterServerClientInterface {
 			int masterPort = config.getMasterPort();
 
 			System.setProperty("java.rmi.server.hostname", masterHostname);
-
 			LocateRegistry.createRegistry(masterPort);
 			MasterServer obj = new MasterServer();
 			MasterServerClientInterface stub = (MasterServerClientInterface) UnicastRemoteObject

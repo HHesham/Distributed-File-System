@@ -1,0 +1,145 @@
+ Initializing replicas paths in Master Server 
+		 Master Server ready ! 
+===>> Write 'file3.txt' request
+===> done writing file3.txt  backet# 1 in primary replica
+===> done writing file3.txt  backet# 2 in primary replica
+===> Start flushing file3.txt to all replicas
+===> done flushing file3.txt to all replicas
+===>> Heartbeats @ sec = 0
+Replica #0 is alive !
+Replica #1 is alive !
+Replica #2 is alive !
+Replica #3 is alive !
+===>> Heartbeats END
+===>> Heartbeats @ sec = 60
+Replica #0 is alive !
+Replica #1 is alive !
+Replica #2 is alive !
+Replica #3 is alive !
+===>> Heartbeats END
+===>> Heartbeats @ sec = 120
+Replica #0 is alive !
+Replica #1 is alive !
+Replica #2 is alive !
+Replica #3 is alive !
+===>> Heartbeats END
+===>> Heartbeats @ sec = 180
+Replica #0 is alive !
+Replica #1 is alive !
+Replica #2 is alive !
+Replica #3 is alive !
+===>> Heartbeats END
+===>> Heartbeats @ sec = 240
+Replica #0 is alive !
+Replica #1 is alive !
+Replica #2 is alive !
+Replica #3 is alive !
+===>> Heartbeats END
+===>> Heartbeats @ sec = 300
+Replica #0 is alive !
+Replica #1 is alive !
+Replica #2 is alive !
+Replica #3 is alive !
+===>> Heartbeats END
+===>> Heartbeats @ sec = 360
+Replica #0 is alive !
+Replica #1 is alive !
+Replica #2 is alive !
+Replica #3 is alive !
+===>> Heartbeats END
+===>> Heartbeats @ sec = 420
+Replica #0 is alive !
+Replica #1 is alive !
+Replica #2 is alive !
+Replica #3 is alive !
+===>> Heartbeats END
+===>> Heartbeats @ sec = 480
+Replica #0 is alive !
+Replica #1 is alive !
+Replica #2 is alive !
+Replica #3 is alive !
+===>> Heartbeats END
+===>> Heartbeats @ sec = 540
+Replica #0 is alive !
+Replica #1 is alive !
+Replica #2 is alive !
+Replica #3 is alive !
+===>> Heartbeats END
+===>> Heartbeats @ sec = 600
+Replica #0 is alive !
+Replica #1 is alive !
+Replica #2 is alive !
+Replica #3 is alive !
+===>> Heartbeats END
+===>> Heartbeats @ sec = 660
+Replica #0 is alive !
+Replica #1 is alive !
+Replica #2 is alive !
+Replica #3 is alive !
+===>> Heartbeats END
+===>> Heartbeats @ sec = 720
+Replica #0 is alive !
+Replica #1 is alive !
+Replica #2 is alive !
+Replica #3 is alive !
+===>> Heartbeats END
+===>> Heartbeats @ sec = 780
+Replica #0 is alive !
+Replica #1 is alive !
+Replica #2 is alive !
+Replica #3 is alive !
+===>> Heartbeats END
+===>> Heartbeats @ sec = 840
+Replica #0 is alive !
+Replica #1 is alive !
+Replica #2 is alive !
+Replica #3 is alive !
+===>> Heartbeats END
+===>> Heartbeats @ sec = 900
+Replica #0 is alive !
+Replica #1 is alive !
+Replica #2 is alive !
+Replica #3 is alive !
+===>> Heartbeats END
+===>> Heartbeats @ sec = 960
+Replica #0 is alive !
+Replica #1 is alive !
+Replica #2 is alive !
+Replica #3 is alive !
+===>> Heartbeats END
+===>> Heartbeats @ sec = 1020
+Replica #0 is alive !
+Replica #1 is alive !
+Replica #2 is alive !
+Replica #3 is alive !
+===>> Heartbeats END
+===>> Heartbeats @ sec = 1080
+Replica #0 is alive !
+Replica #1 is alive !
+Replica #2 is alive !
+Replica #3 is alive !
+===>> Heartbeats END
+===>> Heartbeats @ sec = 1140
+Replica #0 is alive !
+Replica #1 is alive !
+Replica #2 is alive !
+Replica #3 is alive !
+===>> Heartbeats END
+===>> Heartbeats @ sec = 1200
+Replica #0 is alive !
+Replica #1 is alive !
+Replica #2 is alive !
+Replica #3 is alive !
+===>> Heartbeats END
+===>> Heartbeats @ sec = 1260
+Replica #0 is alive !
+Replica #1 is alive !
+Replica #2 is alive !
+Replica #3 is alive !
+===>> Heartbeats END
+===>> Heartbeats @ sec = 1320
+Replica #0 is alive !
+Replica #1 is alive !
+Replica #2 is alive !
+Replica #3 is alive !
+===>> Heartbeats END
